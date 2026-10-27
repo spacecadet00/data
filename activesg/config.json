@@ -1,0 +1,14 @@
+{
+  "project": "ActiveSG Crowd Finder",
+  "source": "https://activesg.gov.sg/gym-pool-crowd",
+  "timezone": "Asia/Singapore",
+  "start_inclusive": "2026-10-28T06:00:00+08:00",
+  "end_exclusive": "2026-11-27T00:00:00+08:00",
+  "collection_hours_sgt": [
+    6,
+    23
+  ],
+  "interval_minutes": 15,
+  "expected_days": 30,
+  "scope": "All publicly visible gym and pool occupancy outlets"
+}
