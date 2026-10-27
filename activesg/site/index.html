@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0e1725"><title>ActiveSG Crowd Finder</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{color-scheme:dark;--bg:#0b1420;--panel:#132233;--line:#294054;--ink:#eef5f9;--muted:#a5b8c8;--green:#42c391;--amber:#e7b45e;--red:#f17c72}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:14px}
+h1{font-size:20px;margin:0;font-weight:740;letter-spacing:-.4px}h2{font-size:16px;margin:0 0 12px}
+.sub,.note{color:var(--muted);font-size:12px}.status{font-size:12px;padding:7px 10px;border:1px solid var(--line);border-radius:30px;white-space:nowrap}
+.shell{padding:15px;max-width:1600px;margin:auto}.toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-bottom:12px}
+label{font-size:12px;color:var(--muted)}select,input[type=range],button{font:inherit}select,button{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+button{cursor:pointer}button:hover{border-color:var(--green)}button:focus-visible,select:focus-visible{outline:2px solid var(--green)}.seg{display:flex;gap:4px;background:var(--panel);padding:3px;border-radius:11px}
+.seg button{border:0;background:none}.seg button.active{background:#29485b}.hidden{display:none!important}
+.layout{display:grid;grid-template-columns:minmax(320px,1.7fr) minmax(320px,1fr);gap:12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}.panel-pad{padding:14px}
+#map{height:min(66vh,660px);min-height:400px;background:#1a2d3d}.leaflet-container{background:#dce7e8}.leaflet-popup-content-wrapper{background:#132233;color:#f0f6fb}.leaflet-popup-tip{background:#132233}
+.pin{display:grid;place-items:center;border:2px solid #fff;border-radius:50%;width:41px;height:41px;color:#fff;font-size:12px;font-weight:750;box-shadow:0 1px 9px #0007}
+.quiet{background:#168f68}.middle{background:#bd7d1f}.busy{background:#c74e43}.unknown{background:#667b8a}
+.legend{display:flex;gap:13px;flex-wrap:wrap;padding:12px}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+ol{list-style:none;padding:0;margin:0;max-height:530px;overflow:auto}.gym{display:flex;justify-content:space-between;align-items:center;text-align:left;gap:12px;width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:13px 15px;background:transparent}
+.gym:hover{background:#1b3447}.gym-name{font-weight:660;font-size:14px}.gym-meta{color:var(--muted);font-size:12px;margin-top:4px}.pill{padding:6px 9px;border-radius:15px;font-size:12px;font-weight:700;white-space:nowrap;background:#364e5d}
+.split{display:flex;justify-content:space-between;gap:12px;align-items:center}.mini{font-size:11px;color:var(--muted)}
+#heatmap{display:grid;grid-template-columns:38px repeat(7,minmax(0,1fr));gap:3px}.heat{height:25px;border-radius:4px;display:grid;place-items:center;font-size:10px;color:white}
+.heatHead{font-size:10px;text-align:center;color:var(--muted);height:22px}.heatHour{font-size:10px;color:var(--muted);display:flex;align-items:center}
+#weekly{font-size:12px;color:var(--muted);line-height:1.9}.detail-title{font-size:17px;font-weight:700}
+@media(max-width:850px){.layout{grid-template-columns:1fr}#map{height:47vh;min-height:310px}ol{max-height:340px}.shell{padding:9px}header{padding:13px}.toolbar{gap:6px}select,button{padding:8px}}
+</style>
+</head>
+<body>
+<header><div><h1>ActiveSG Crowd Finder</h1><div class="sub">Find the quieter gym · real readings, no invented crowd estimates</div></div><div id="fresh" class="status">Loading data…</div></header>
+<main class="shell">
+<div class="toolbar">
+  <div class="seg"><button id="mode-live" class="active">Live now</button><button id="mode-typical">Typical time</button></div>
+  <label for="kind">Facility</label><select id="kind"><option value="gym">Gyms</option><option value="pool">Swimming pools</option><option value="all">All outlets</option></select>
+  <span id="time-controls" class="hidden"><label for="weekday">Day</label><select id="weekday"><option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option><option value="5">Saturday</option><option value="6">Sunday</option></select>
+  <label for="hour">Hour</label><select id="hour"></select></span>
+  <button id="locate">Use my location</button>
+  <button id="all">Show all</button>
+</div>
+<div class="layout">
+  <section class="panel">
+    <div id="map" aria-label="Map showing ActiveSG gym and swimming pool locations"></div>
+    <div class="legend"><span><i class="dot quiet"></i>Under 35%</span><span><i class="dot middle"></i>35–69%</span><span><i class="dot busy"></i>70%+</span><span><i class="dot unknown"></i>Unknown / closed</span></div>
+    <div class="panel-pad note" id="map-note">Only validated outlet coordinates are plotted. Unmapped outlets remain in the list.</div>
+  </section>
+  <section class="panel">
+    <div class="panel-pad"><div class="split"><h2 id="rank-title">Quieter gyms</h2><span class="mini" id="count">—</span></div>
+      <div class="note" id="rank-help">Current crowds. Closed, stale and missing readings are not treated as zero.</div></div>
+    <ol id="ranking"></ol>
+  </section>
+</div>
+<section id="details" class="panel" style="margin-top:12px">
+ <div class="panel-pad">
+  <div class="split"><div><div id="detail-name" class="detail-title">Choose an outlet</div><div id="detail-info" class="note">Select a map marker or list row to see historical patterns.</div></div><div id="detail-score" class="pill">—</div></div>
+  <div style="margin-top:18px"><h2>Weekly consistency · hour by weekday</h2><div id="heatmap"></div></div>
+  <div style="margin-top:14px"><h2>Same weekday and hour across weeks</h2><div id="weekly">Select an outlet with history.</div></div>
+ </div>
+</section>
+<p class="note">Occupancy percentage is total facility occupancy, not availability of individual weight machines. Patterns are medians of weekly medians; 3+ weeks needed for consistency labels. Location is used only in your browser.</p>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+"use strict";
+const base = "./data/";
+const $ = id => document.getElementById(id);
+const state = {mode:"live",kind:"gym",day:(new Date().getDay()+6)%7,hour:new Date().getHours(),pos:null,chosen:null};
+let outlets={},live={outlets:{}},stats={patterns:{}},markers=[],map;
+const weekdays=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const escapeHTML=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const human=p=>p==null?"—":Math.round(p)+"%";
+function shade(p){return p==null?"unknown":p<35?"quiet":p<70?"middle":"busy"}
+function ago(iso){if(!iso)return Infinity;return (Date.now()-Date.parse(iso))/60000}
+function pattern(id,day=state.day,hour=state.hour){return stats.patterns?.[id]?.[String(day)]?.[String(hour)]||null}
+function crowd(o){
+ if(state.mode==="live"){
+   const v=live.outlets?.[o.id],stale=ago(live.observed_at)>45;
+   return {pct:stale?null:(v?.pct??null),note:stale?"Stale live data":(v?.status||"No live reading"),source:"live"}
+ }
+ const p=pattern(o.id);return {pct:p?.median??null,note:p?p.weeks+" observed weeks · "+p.consistency:"Insufficient history",source:"history"};
+}
+function distance(a,b){const r=Math.PI/180,dLat=(b.lat-a.lat)*r,dLon=(b.lon-a.lon)*r;return 6371*2*Math.asin(Math.sqrt(Math.sin(dLat/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dLon/2)**2))}
+function lookup(){
+ const records=Object.values(outlets).filter(o=>state.kind==="all"||o.type===state.kind);
+ return records.map(o=>({o,c:crowd(o),km:state.pos&&o.lat!=null?distance(state.pos,o):null}))
+  .sort((a,b)=>(a.c.pct===null)-(b.c.pct===null)||(a.c.pct??999)-(b.c.pct??999)||((a.km??999)-(b.km??999)));
+}
+function render(){
+ const rows=lookup();
+ $("rank-title").textContent=state.mode==="live"?"Quietest right now":"Typical quieter outlets";
+ $("count").textContent=rows.length+" outlets";
+ $("rank-help").textContent=state.mode==="live"?"Latest recorded crowd, sorted low to high; missing is last.":"Median crowd for "+weekdays[state.day]+" "+state.hour+":00, sorted low to high.";
+ const list=$("ranking");list.replaceChildren();
+ for(const {o,c,km} of rows){
+   const li=document.createElement("li"),btn=document.createElement("button");
+   btn.className="gym";btn.type="button";
+   const left=document.createElement("div"),name=document.createElement("div"),meta=document.createElement("div"),pct=document.createElement("span");
+   name.className="gym-name";name.textContent=o.name;meta.className="gym-meta";
+   meta.textContent=c.note+(km!==null?" · "+km.toFixed(1)+" km":"");
+   pct.className="pill";pct.textContent=human(c.pct);
+   left.append(name,meta);btn.append(left,pct);btn.onclick=()=>choose(o.id,true);li.append(btn);list.append(li);
+ }
+ for(const m of markers)map.removeLayer(m);markers=[];
+ let plotted=0;
+ for(const {o,c} of rows){
+   if(!Number.isFinite(Number(o.lat))||!Number.isFinite(Number(o.lon))||o.lat==null||o.lon==null)continue;
+   const icon=L.divIcon({className:"",html:'<span class="pin '+shade(c.pct)+'">'+escapeHTML(c.pct==null?"?":Math.round(c.pct)+"%")+"</span>",iconSize:[41,41],iconAnchor:[20,20]});
+   const marker=L.marker([o.lat,o.lon],{icon}).addTo(map);
+   marker.bindPopup("<strong>"+escapeHTML(o.name)+"</strong><div>"+human(c.pct)+" · "+escapeHTML(c.note)+"</div>");
+   marker.on("click",()=>choose(o.id,false));markers.push(marker);plotted++;
+ }
+ $("map-note").textContent=plotted+" of "+rows.length+" filtered outlets have cached, validated coordinates. Others remain searchable in the list.";
+ if(state.chosen&&outlets[state.chosen])detail(outlets[state.chosen]);
+}
+function choose(id,fly){
+ state.chosen=id;const o=outlets[id];if(!o)return;
+ if(fly&&o.lat!=null&&o.lon!=null)map.setView([o.lat,o.lon],13);
+ detail(o);
+ $("details").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function detail(o){
+ const c=crowd(o),p=pattern(o.id);
+ $("detail-name").textContent=o.name;
+ $("detail-info").textContent=(o.type==="gym"?"Gym":"Swimming pool")+" · "+c.note+
+    (o.lat==null?" · Coordinates not available":"");
+ $("detail-score").textContent=human(c.pct);
+ const heat=$("heatmap");heat.replaceChildren();
+ heat.append(document.createElement("div"));
+ for(const w of weekdays){const h=document.createElement("div");h.className="heatHead";h.textContent=w;heat.append(h)}
+ for(let hour=6;hour<=22;hour++){
+   const label=document.createElement("div");label.className="heatHour";label.textContent=hour+":00";heat.append(label);
+   for(let day=0;day<7;day++){
+     const v=pattern(o.id,day,hour),el=document.createElement("div");
+     el.className="heat "+shade(v?.median??null);el.textContent=v?.median!=null?Math.round(v.median):"–";
+     el.title=weekdays[day]+" "+hour+":00 · "+(v?human(v.median)+" / "+v.weeks+" weeks / "+v.consistency:"No data");
+     el.onclick=()=>{state.day=day;state.hour=hour;$("weekday").value=day;$("hour").value=hour;state.mode="typical";updateModes();render()};
+     heat.append(el);
+   }
+ }
+ const weekly=$("weekly");weekly.replaceChildren();
+ if(!p){weekly.textContent="No historical readings for this weekday/hour yet.";return}
+ const desc=document.createElement("div");desc.textContent="Median "+human(p.median)+" · range "+human(p.q25)+"–"+human(p.q75)+" (middle 50% of weekly readings) · "+p.weeks+" weeks · "+p.consistency;weekly.append(desc);
+ for(const [week,value] of Object.entries(p.weekly||{})){const d=document.createElement("div");d.textContent=week+": "+human(value);weekly.append(d)}
+}
+function updateModes(){
+ $("mode-live").classList.toggle("active",state.mode==="live");
+ $("mode-typical").classList.toggle("active",state.mode==="typical");
+ $("time-controls").classList.toggle("hidden",state.mode==="live");
+}
+async function boot(){
+ const hours=$("hour");for(let h=6;h<=22;h++){const op=document.createElement("option");op.value=h;op.textContent=h+":00";hours.append(op)}
+ $("weekday").value=state.day;$("hour").value=Math.max(6,Math.min(22,state.hour));
+ state.hour=Number($("hour").value);
+ map=L.map("map",{zoomControl:true}).setView([1.3521,103.8198],11);
+ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',maxZoom:18}).addTo(map);
+ try{
+   const responses=await Promise.all(["outlets.json","live.json","patterns.json"].map(s=>fetch(base+s+"?v="+Date.now(),{cache:"no-store"})));
+   if(responses.some(r=>!r.ok))throw new Error("One or more datasets are not published yet");
+   [outlets,live,stats]=await Promise.all(responses.map(r=>r.json()));
+   const mins=ago(live.observed_at);
+   $("fresh").textContent=Number.isFinite(mins)?"Last reading "+(mins<1?"just now":Math.round(mins)+" min ago")+(mins>45?" · stale":""):"Awaiting first collection";
+   render();
+ }catch(err){$("fresh").textContent="No published data";$("rank-help").textContent="Data unavailable: "+err.message}
+ $("mode-live").onclick=()=>{state.mode="live";updateModes();render()};
+ $("mode-typical").onclick=()=>{state.mode="typical";updateModes();render()};
+ $("kind").onchange=e=>{state.kind=e.target.value;render()};
+ $("weekday").onchange=e=>{state.day=Number(e.target.value);render()};
+ $("hour").onchange=e=>{state.hour=Number(e.target.value);render()};
+ $("all").onclick=()=>{state.pos=null;map.setView([1.3521,103.8198],11);render()};
+ $("locate").onclick=()=>{
+   if(!navigator.geolocation){alert("Geolocation is not available.");return}
+   navigator.geolocation.getCurrentPosition(p=>{
+     state.pos={lat:p.coords.latitude,lon:p.coords.longitude};
+     map.setView([state.pos.lat,state.pos.lon],13);render();
+   },()=>alert("Location permission unavailable. You can still use the map."),{enableHighAccuracy:false,timeout:10000})
+ };
+}
+boot();
+</script>
+</body></html>
