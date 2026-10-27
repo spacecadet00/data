@@ -1,0 +1,82 @@
+name: ActiveSG crowd collection
+
+on:
+  schedule:
+    # Singapore time, 06:07 to 22:52, every 15 minutes.
+    # Off-minute times reduce top-of-hour scheduling congestion.
+    - cron: '7,22,37,52 6-22 * * *'
+      timezone: 'Asia/Singapore'
+  workflow_dispatch:
+  push:
+    paths:
+      - 'activesg/**'
+      - '.github/workflows/activesg.yml'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: activesg-collector-and-pages
+  cancel-in-progress: false
+
+jobs:
+  collect-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'activesg/requirements.txt'
+      - name: Install dependencies and Chromium
+        run: |
+          pip install -r activesg/requirements.txt
+          python -m playwright install --with-deps chromium
+      - name: Test parser and analysis utilities
+        run: |
+          cd activesg
+          python -m unittest discover -s . -p 'test_pipeline.py'
+      - name: Collect publicly available occupancy data
+        run: python activesg/src/collector.py
+      - name: Recalculate historical patterns once daily
+        shell: bash
+        run: |
+          HOUR=$(TZ=Asia/Singapore date +%H)
+          MINUTE=$(TZ=Asia/Singapore date +%M)
+          if [[ "$GITHUB_EVENT_NAME" != "schedule" ]] || { [[ "$HOUR" == "22" ]] && (( 10#$MINUTE >= 50 )); }; then
+            python activesg/src/build_stats.py
+          fi
+      - name: Commit compact readings to repository
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add activesg/data/
+          if ! git diff --cached --quiet; then
+            git commit -m "data: record ActiveSG occupancy (SGT)"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          else
+            echo "No new observations."
+          fi
+      - name: Prepare static dashboard files
+        run: |
+          mkdir -p activesg/site/data
+          cp activesg/data/outlets.json activesg/data/live.json activesg/data/patterns.json activesg/site/data/
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Package dashboard
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: activesg/site
+      - name: Deploy dashboard
+        id: deployment
+        uses: actions/deploy-pages@v4
+        env:
+          GITHUB_PAGES_DEPLOYMENT_TIMEOUT: 600000
