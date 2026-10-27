@@ -36,7 +36,7 @@ ol{list-style:none;padding:0;margin:0;max-height:530px;overflow:auto}.gym{displa
   <div class="seg"><button id="mode-live" class="active">Live now</button><button id="mode-typical">Typical time</button></div>
   <label for="kind">Facility</label><select id="kind"><option value="gym">Gyms</option><option value="pool">Swimming pools</option><option value="all">All outlets</option></select>
   <span id="time-controls" class="hidden"><label for="weekday">Day</label><select id="weekday"><option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option><option value="5">Saturday</option><option value="6">Sunday</option></select>
-  <label for="hour">Hour</label><select id="hour"></select></span>
+  <label for="hour">Hour</label><select id="hour"></select><input id="hour-slider" type="range" min="6" max="22" step="1" value="8" aria-label="Time of day"></span>
   <button id="locate">Use my location</button>
   <button id="all">Show all</button>
 </div>
@@ -59,7 +59,7 @@ ol{list-style:none;padding:0;margin:0;max-height:530px;overflow:auto}.gym{displa
   <div style="margin-top:14px"><h2>Same weekday and hour across weeks</h2><div id="weekly">Select an outlet with history.</div></div>
  </div>
 </section>
-<p class="note">Occupancy percentage is total facility occupancy, not availability of individual weight machines. Patterns are medians of weekly medians; 3+ weeks needed for consistency labels. Location is used only in your browser.</p>
+<p class="note">Occupancy percentage is total facility occupancy, not availability of individual weight machines. Patterns are medians of weekly medians; 3+ weeks needed for consistency labels. Location is used only in your browser. Independent project, not affiliated with or endorsed by Sport Singapore or ActiveSG.</p>
 </main>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -135,7 +135,7 @@ function detail(o){
      const v=pattern(o.id,day,hour),el=document.createElement("div");
      el.className="heat "+shade(v?.median??null);el.textContent=v?.median!=null?Math.round(v.median):"–";
      el.title=weekdays[day]+" "+hour+":00 · "+(v?human(v.median)+" / "+v.weeks+" weeks / "+v.consistency:"No data");
-     el.onclick=()=>{state.day=day;state.hour=hour;$("weekday").value=day;$("hour").value=hour;state.mode="typical";updateModes();render()};
+     el.onclick=()=>{state.day=day;state.hour=hour;$("weekday").value=day;$("hour").value=hour;$("hour-slider").value=hour;state.mode="typical";updateModes();render()};
      heat.append(el);
    }
  }
@@ -152,7 +152,7 @@ function updateModes(){
 async function boot(){
  const hours=$("hour");for(let h=6;h<=22;h++){const op=document.createElement("option");op.value=h;op.textContent=h+":00";hours.append(op)}
  $("weekday").value=state.day;$("hour").value=Math.max(6,Math.min(22,state.hour));
- state.hour=Number($("hour").value);
+ state.hour=Number($("hour").value);$("hour-slider").value=state.hour;
  map=L.map("map",{zoomControl:true}).setView([1.3521,103.8198],11);
  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',maxZoom:18}).addTo(map);
  try{
@@ -167,7 +167,8 @@ async function boot(){
  $("mode-typical").onclick=()=>{state.mode="typical";updateModes();render()};
  $("kind").onchange=e=>{state.kind=e.target.value;render()};
  $("weekday").onchange=e=>{state.day=Number(e.target.value);render()};
- $("hour").onchange=e=>{state.hour=Number(e.target.value);render()};
+ $("hour").onchange=e=>{state.hour=Number(e.target.value);$("hour-slider").value=state.hour;render()};
+ $("hour-slider").oninput=e=>{state.hour=Number(e.target.value);$("hour").value=state.hour;render()};
  $("all").onclick=()=>{state.pos=null;map.setView([1.3521,103.8198],11);render()};
  $("locate").onclick=()=>{
    if(!navigator.geolocation){alert("Geolocation is not available.");return}
