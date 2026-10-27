@@ -2,15 +2,11 @@ name: ActiveSG crowd collection
 
 on:
   schedule:
-    # Singapore time, 06:07 to 22:52, every 15 minutes.
+    # Gym operating hours in Singapore: 07:07 to 21:52, every 15 minutes.
     # Off-minute times reduce top-of-hour scheduling congestion.
-    - cron: '7,22,37,52 6-22 * * *'
+    - cron: '7,22,37,52 7-21 * * *'
       timezone: 'Asia/Singapore'
   workflow_dispatch:
-  push:
-    paths:
-      - 'activesg/**'
-      - '.github/workflows/activesg.yml'
 
 permissions:
   contents: write
@@ -73,7 +69,7 @@ jobs:
         run: |
           HOUR=$(TZ=Asia/Singapore date +%H)
           MINUTE=$(TZ=Asia/Singapore date +%M)
-          if [[ "$GITHUB_EVENT_NAME" != "schedule" ]] || { [[ "$HOUR" == "22" ]] && (( 10#$MINUTE >= 50 )); }; then
+          if [[ "$GITHUB_EVENT_NAME" != "schedule" ]] || { [[ "$HOUR" == "21" ]] && (( 10#$MINUTE >= 50 )); }; then
             python activesg/src/build_stats.py
           fi
       - name: Commit compact readings to repository
