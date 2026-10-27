@@ -255,9 +255,18 @@ def collect():
     day_path = ROOT / "data" / "raw" / (now.strftime("%Y-%m-%d") + ".csv")
     day_path.parent.mkdir(parents=True, exist_ok=True)
     metadata = read_json(metadata_path, {})
+    seeds = read_json(ROOT / "data" / "seed_locations.json", [])
     for r in records:
         item = metadata.get(r["id"], {})
         item.update(id=r["id"], name=r["name"], type=r["type"])
+        if item.get("lat") is None:
+            for seed in seeds:
+                name = r["name"].lower()
+                needle = seed["match"].lower()
+                matched = name == needle if seed.get("exact") else needle in name
+                if r["type"] == seed["type"] and matched:
+                    item.update(lat=seed["lat"], lon=seed["lon"], location_source=seed["source"])
+                    break
         metadata[r["id"]] = item
     geocode_one(metadata)
     # Deduplicate approximate scheduled slot in case of manual/retry run.
