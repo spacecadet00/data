@@ -138,7 +138,7 @@ def scrape():
         try:
             page.goto(SOURCE, wait_until="domcontentloaded", timeout=45000)
             page.wait_for_timeout(4000)
-            for hint in ("gym", "pool"):
+            for hint in ("gym",):
                 # Switch only if a specifically labeled tab/button exists; do not
                 # click arbitrary text that merely includes "gym" or "pool".
                 selectors = [
@@ -246,8 +246,9 @@ def collect():
     if not (start <= now < end):
         print(f"Collection stopped: outside {start.isoformat()} to {end.isoformat()}")
         return
-    if not (6 <= now.hour < 23):
-        print("Outside sampling window 06:00–23:00 SGT")
+    start_hour, end_hour = config["collection_hours_sgt"]
+    if not (start_hour <= now.hour < end_hour):
+        print(f"Outside gym-focused sampling window {start_hour:02d}:00–{end_hour:02d}:00 SGT")
         return
     records = scrape()
     metadata_path = ROOT / "data" / "outlets.json"
