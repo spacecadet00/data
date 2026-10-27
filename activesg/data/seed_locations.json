@@ -1,0 +1,45 @@
+[
+  {
+    "type": "gym",
+    "match": "fernvale square",
+    "lat": 1.391422,
+    "lon": 103.8731,
+    "source": "ActiveSG Circle official gym directory"
+  },
+  {
+    "type": "gym",
+    "match": "sengkang activesg gym",
+    "lat": 1.39672,
+    "lon": 103.88645,
+    "source": "ActiveSG directory / OpenStreetMap"
+  },
+  {
+    "type": "gym",
+    "match": "serangoon central",
+    "lat": 1.352467,
+    "lon": 103.8721,
+    "source": "ActiveSG Circle official gym directory"
+  },
+  {
+    "type": "gym",
+    "match": "enabling village",
+    "lat": 1.286959,
+    "lon": 103.8146,
+    "source": "ActiveSG Circle official gym directory"
+  },
+  {
+    "type": "gym",
+    "match": "activesg gym @ toa payoh",
+    "lat": 1.337439,
+    "lon": 103.8443,
+    "source": "ActiveSG Circle official gym directory",
+    "exact": true
+  },
+  {
+    "type": "pool",
+    "match": "sengkang swimming complex",
+    "lat": 1.395466,
+    "lon": 103.8858,
+    "source": "ActiveSG Circle official pool directory"
+  }
+]
