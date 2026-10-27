@@ -5,8 +5,9 @@ Independent, non-commercial project. Not affiliated with or endorsed by ActiveSG
 ## Scope and lifetime
 
 - **28 October–26 November 2026 (30 calendar days)**: public occupancy readings.
-- **06:07–22:52 SGT**, every 15 minutes while GitHub Actions is available.
+- **07:07–21:52 SGT**, every 15 minutes while GitHub Actions is available.
 - **27 November 2026**: the next scheduled run disables its own workflow. Extension requires renewed permission.
+- Gym operation hours determine the global schedule, identically on weekdays and weekends. Any swimming pool occupancy supplied incidentally by the public page may also be kept.
 - Only outlets with public occupancy readings are recorded. An absent or closed value is not converted to zero.
 
 ## Dashboard
@@ -37,7 +38,7 @@ For first-time publishing, go to **repository Settings → Pages → Build and d
 
 Rows have explicit timestamps in Asia/Singapore; missing is distinct from 0%. An ISO week contributes one median per outlet/weekday/hour, regardless of how many successful 15-minute polls it contains. For 3+ independent weeks, a range across weekly medians of ≤15 percentage points is labeled **consistent**, 15–30 **moderate**, and >30 **variable**. Fewer than three weeks is **insufficient**.
 
-The raw CSV remains source of truth, with patterns regenerated once per day to avoid high dashboard data transfer. An outlet is mapped only if validated latitude/longitude are found. Unmapped facilities remain in the ranking list. Geocoding queries are limited to one per polling run and cached.
+The automated collector has no `push` trigger, so its own data commits cannot initiate duplicate polling runs. The raw CSV remains source of truth, with patterns regenerated once per day to avoid high dashboard data transfer. An outlet is mapped only if validated latitude/longitude are found. Unmapped facilities remain in the ranking list. Geocoding queries are limited to one per polling run and cached.
 
 ## Collection safety
 
