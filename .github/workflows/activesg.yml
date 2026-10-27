@@ -26,6 +26,9 @@ jobs:
   collect-and-publish:
     runs-on: ubuntu-latest
     timeout-minutes: 16
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
         with:
