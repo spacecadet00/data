@@ -1,0 +1,56 @@
+{
+  "gym-fernvale-square-activesg-gym": {
+    "id": "gym-fernvale-square-activesg-gym",
+    "name": "Fernvale Square ActiveSG Gym",
+    "type": "gym",
+    "lat": 1.391422,
+    "lon": 103.8731,
+    "location_source": "existing seed_locations.json",
+    "reference_only": true
+  },
+  "gym-sengkang-activesg-gym": {
+    "id": "gym-sengkang-activesg-gym",
+    "name": "Sengkang ActiveSG Gym",
+    "type": "gym",
+    "lat": 1.39672,
+    "lon": 103.88645,
+    "location_source": "existing seed_locations.json",
+    "reference_only": true
+  },
+  "gym-serangoon-central-activesg-gym": {
+    "id": "gym-serangoon-central-activesg-gym",
+    "name": "Serangoon Central ActiveSG Gym",
+    "type": "gym",
+    "lat": 1.352467,
+    "lon": 103.8721,
+    "location_source": "existing seed_locations.json",
+    "reference_only": true
+  },
+  "gym-enabling-village-activesg-gym": {
+    "id": "gym-enabling-village-activesg-gym",
+    "name": "Enabling Village ActiveSG Gym",
+    "type": "gym",
+    "lat": 1.286959,
+    "lon": 103.8146,
+    "location_source": "existing seed_locations.json",
+    "reference_only": true
+  },
+  "gym-activesg-gym-toa-payoh": {
+    "id": "gym-activesg-gym-toa-payoh",
+    "name": "ActiveSG Gym @ Toa Payoh",
+    "type": "gym",
+    "lat": 1.337439,
+    "lon": 103.8443,
+    "location_source": "existing seed_locations.json",
+    "reference_only": true
+  },
+  "pool-sengkang-swimming-complex": {
+    "id": "pool-sengkang-swimming-complex",
+    "name": "Sengkang Swimming Complex",
+    "type": "pool",
+    "lat": 1.395466,
+    "lon": 103.8858,
+    "location_source": "existing seed_locations.json",
+    "reference_only": true
+  }
+}
