@@ -1,14 +1,10 @@
 name: ActiveSG crowd collection
 
 on:
-  schedule:
-    # GitHub Actions cron runs in UTC. These are 07:07–21:52 Singapore time (UTC+8).
-    - cron: '7,22,37,52 23 * * *' # 07:07–07:52 SGT (next calendar day)
-    - cron: '7,22,37,52 0-13 * * *' # 08:07–21:52 SGT
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/activesg.yml' # run once automatically when this workflow is repaired
+  # Temporarily pause polling: verified Cloudflare HTTP 403 from GitHub runner.
+  # Restore the UTC cron entries below only after an authorized data feed works.
+  # - cron: '7,22,37,52 23 * * *' # 07:07–07:52 SGT
+  # - cron: '7,22,37,52 0-13 * * *' # 08:07–21:52 SGT
   workflow_dispatch:
 
 permissions:
