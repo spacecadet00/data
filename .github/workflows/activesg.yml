@@ -2,10 +2,13 @@ name: ActiveSG crowd collection
 
 on:
   schedule:
-    # Gym operating hours in Singapore: 07:07 to 21:52, every 15 minutes.
-    # Off-minute times reduce top-of-hour scheduling congestion.
-    - cron: '7,22,37,52 7-21 * * *'
-      timezone: 'Asia/Singapore'
+    # GitHub Actions cron runs in UTC. These are 07:07–21:52 Singapore time (UTC+8).
+    - cron: '7,22,37,52 23 * * *' # 07:07–07:52 SGT (next calendar day)
+    - cron: '7,22,37,52 0-13 * * *' # 08:07–21:52 SGT
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/activesg.yml' # run once automatically when this workflow is repaired
   workflow_dispatch:
 
 permissions:
@@ -66,6 +69,14 @@ jobs:
       - name: Collect publicly available occupancy data
         if: steps.gate.outputs.active == 'true'
         run: python activesg/src/collector.py
+      - name: Upload browser diagnostics if collection fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: activesg-browser-diagnostics
+          path: activesg/debug/
+          if-no-files-found: warn
+          retention-days: 3
       - name: Recalculate historical patterns once daily
         if: steps.gate.outputs.active == 'true'
         shell: bash
@@ -93,20 +104,20 @@ jobs:
             echo "No new observations."
           fi
       - name: Prepare static dashboard files
-        if: steps.gate.outputs.active == 'true'
+        if: always() && steps.gate.outputs.active == 'true'
         run: |
           mkdir -p activesg/site/data
           cp activesg/data/outlets.json activesg/data/live.json activesg/data/patterns.json activesg/site/data/
       - name: Configure GitHub Pages
-        if: steps.gate.outputs.active == 'true'
+        if: always() && steps.gate.outputs.active == 'true'
         uses: actions/configure-pages@v5
       - name: Package dashboard
-        if: steps.gate.outputs.active == 'true'
+        if: always() && steps.gate.outputs.active == 'true'
         uses: actions/upload-pages-artifact@v4
         with:
           path: activesg/site
       - name: Deploy dashboard
-        if: steps.gate.outputs.active == 'true'
+        if: always() && steps.gate.outputs.active == 'true'
         id: deployment
         uses: actions/deploy-pages@v4
         env:
