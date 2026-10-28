@@ -1,0 +1,44 @@
+name: Publish ActiveSG dashboard
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/activesg-pages.yml'
+      - 'activesg/site/**'
+      - 'activesg/data/live.json'
+      - 'activesg/data/outlets.json'
+      - 'activesg/data/patterns.json'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: activesg-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare site with last verified datasets
+        run: |
+          mkdir -p activesg/site/data
+          cp activesg/data/outlets.json activesg/data/live.json activesg/data/patterns.json activesg/site/data/
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload dashboard
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: activesg/site
+      - name: Deploy dashboard
+        id: deployment
+        uses: actions/deploy-pages@v4
