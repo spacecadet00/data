@@ -118,12 +118,19 @@ def dedupe(items):
 
 def scrape():
     from playwright.sync_api import sync_playwright
-    records, errors = [], []
+    records, errors, response_trace, page_errors = [], [], [], []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
         page = browser.new_page(viewport={"width": 1380, "height": 1000},
                                 user_agent="ActiveSGCrowdResearch/1.0 (+https://github.com/spacecadet00/data)")
+        page.on("pageerror", lambda exc: page_errors.append(str(exc)[:500]))
         def on_response(response):
+            if len(response_trace) < 120:
+                response_trace.append({
+                    "status": response.status,
+                    "url": response.url.split("?")[0][:250],
+                    "content_type": response.headers.get("content-type", "")[:100],
+                })
             if response.status != 200 or not re.search(r"activesg|api", response.url, re.I):
                 return
             content_type = response.headers.get("content-type", "")
@@ -188,6 +195,36 @@ def scrape():
                     rec = parse_card_lines(txt, hint)
                     if rec:
                         records.append(rec)
+            # Save public-page diagnostics when the parser finds no usable readings.
+            # No cookies, request headers, or query-string tokens are recorded.
+            if len(dedupe(records)) < 4:
+                try:
+                    debug = ROOT / "debug"
+                    debug.mkdir(parents=True, exist_ok=True)
+                    frames = []
+                    for frame in page.frames:
+                        try:
+                            frames.append({
+                                "url": frame.url.split("?")[0][:250],
+                                "body_text": frame.locator("body").inner_text(timeout=2000)[:5000],
+                            })
+                        except Exception as exc:
+                            frames.append({"frame_error": str(exc)[:300]})
+                    diagnostic = {
+                        "page_url": page.url.split("?")[0],
+                        "page_title": page.title(),
+                        "frames": frames,
+                        "response_trace": response_trace,
+                        "page_errors": page_errors,
+                        "selector_errors": errors[:12],
+                        "records_found": len(dedupe(records)),
+                    }
+                    (debug / "collector-diagnostics.json").write_text(
+                        json.dumps(diagnostic, indent=2, ensure_ascii=False), encoding="utf-8")
+                    page.screenshot(path=str(debug / "collector-page.png"), timeout=5000)
+                    print("Collector diagnostics saved to activesg/debug/ for workflow artifact.", file=sys.stderr)
+                except Exception as exc:
+                    print(f"Unable to capture collector diagnostics: {exc}", file=sys.stderr)
         finally:
             browser.close()
     records = dedupe(records)
